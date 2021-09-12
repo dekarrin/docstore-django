@@ -1,1 +1,1 @@
-web: gunicorn spekit.wsgi
+web: gunicorn spekit.wsgi --log-file -
