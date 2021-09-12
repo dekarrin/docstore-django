@@ -22,7 +22,7 @@ def serialize_models(model_or_models, **options):
     serialize function as its 'options' kwargs parameters.
     """
 
-    # TODO: ensure GET URI is included in output
+    # TODO: ensure URI is included in output
 
     try:
         json_data = serialize('json', model_or_models, **options)
@@ -86,7 +86,11 @@ def deserialize_models(json_data, expect_single_object: bool=False, default_id: 
         required key 'model'.
     """
 
-    loaded_json = json.loads(json_data)
+    try:
+        loaded_json = json.loads(json_data)
+    except json.JSONDecodeError:
+        raise ModelParseError("Body does not contain valid JSON")
+    
     if expect_single_object:
         # we expect to have been sent a single object in json. Treat the loaded
         # json accordingly, but be ready to catch exceptions as input may be
@@ -94,7 +98,7 @@ def deserialize_models(json_data, expect_single_object: bool=False, default_id: 
         try:
             converted_obj = _rest_json_to_django_model_json(loaded_json, default_id)
         except KeyError as e:
-            raise ModelParseError("Model JSON is not valid: " + str(e))
+            raise ModelParseError("Model JSON is not valid: {!s}".format(e))
         except TypeError as e:
             raise ModelParseError("Model JSON cannot be {!s}; must be a JSON object at top level".format(type(loaded_json)))
         
@@ -110,7 +114,7 @@ def deserialize_models(json_data, expect_single_object: bool=False, default_id: 
             try:
                 converted_obj = _rest_json_to_django_model_json(item, default_id)
             except KeyError as e:
-                raise ModelParseError("Model JSON is not valid: " + str(e))
+                raise ModelParseError("Model JSON is not valid: {!s}".format(e))
             except TypeError as e:
                 raise ModelParseError("Model JSON cannot be {!s}; must be a JSON array at top level".format(type(loaded_json)))
 

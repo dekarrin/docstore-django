@@ -1,49 +1,60 @@
 import uuid
 
-from django.http import JsonResponse, HttpResponseNotFound
-from django.http.response import HttpResponse, HttpResponseNotAllowed, HttpResponseServerError
+from django.http import JsonResponse
 from django.views import View
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.parsers import JSONParser
 
-
-from . import util
 from .models import Topic
+from .serializers import TopicSerializer
 
 # Create your views here.
-class TopicView(View):
+class TopicListView(View):
+    def get(self, request):
+        topics = Topic.objects.all()
+        serializer = TopicSerializer(topics, many=True)
+        return JsonResponse(serializer.data, safe=False)
 
-    def put(self, request, topic_id: uuid.UUID=None):
-        if topic_id is None:
-            return JsonResponse(status=405, data={'error': 'Method PUT not allowed at this resource'})
+    def post(self, request):
+        data = JSONParser().parse(request)
+        serializer = TopicSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=201)
+        return JsonResponse(serializer.errors, status=400)
 
-        payload = request.read()
+
+class TopicDetailView(View):
+    def get(self, request, topic_id: uuid.UUID):
         try:
-            parsed = util.deserialize_models(payload, expect_single_object=True, default_id=str(topic_id))
-        except util.ModelParseError as e:
-            return JsonResponse(status=400, data={'error': "Body does not contain a valid Topic: {!s}".format(e)})
-
-        # deserialize_models will have ensured that there is only one item here:
-        for deserialized_object in parsed:
-            deserialized_object.id = topic_id
-            deserialized_object.save()
-
-        # success
-        return JsonResponse(status=204)
-        
-
-    def get(self, request, topic_id: uuid.UUID=None):
-        if topic_id is None:
-            json_data = util.serialize_models(Topic.objects.all())
-            return HttpResponse(json_data, content_type="application/json")
-
-        try:
-            t = Topic.objects.get(id=topic_id)
+            t = Topic.objects.get(pk=topic_id)
         except ObjectDoesNotExist:
-            return JsonResponse(status=404, data={'error': 'The requested topic does not exist'})
+            return JsonResponse(status=404, data={'error': 'No topic with the requested ID exists'})
+
+        serializer = TopicSerializer(t)
+        return JsonResponse(serializer.data)
+
+    def put(self, request, topic_id: uuid.UUID):
+        try:
+            t = Topic.objects.get(pk=topic_id)
+        except ObjectDoesNotExist:
+            return JsonResponse(status=404, data={'error': 'No topic with the requested ID exists'})
         
-        json_data = util.serialize_models(t)
-        # Not sure how to get JsonResponse to accept Model directly; it seems to
-        # want a dict but django's core JSON serialize() func does not
-        # produce that.
-        # TODO: look into above, also check Django REST framework instead of manual implementation
-        return HttpResponse(json_data, content_type="application/json")
+        data = JSONParser().parse(request)
+        serializer = TopicSerializer(t, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=201)
+        return JsonResponse(serializer.errors, status=400)
+
+    def delete(self, request, topic_id: uuid.UUID):
+        try:
+            t = Topic.objects.get(pk=topic_id)
+        except ObjectDoesNotExist:
+            # this isn't actually a problem, DELETE is idempotent and the
+            # operation requested by the user has the result as the user would
+            # expect, so just return 204.
+            return JsonResponse(status=204)
+        
+        t.delete()
+        return JsonResponse(status=204)
