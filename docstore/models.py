@@ -28,15 +28,16 @@ class Folder(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True)
-    topics = models.ManyToManyField(Topic)
+    topics = models.ManyToManyField(Topic, related_name='folders', blank=True)
 
     def __str__(self):
         return self.name
 
-    def absolute_path(self) -> str:
+    @property
+    def path(self) -> str:
         path = '/' + self.name
         if self.parent is not None:
-            path = self.parent.absolute_path() + path
+            path = self.parent.path + path
         return path
 
 
@@ -49,7 +50,8 @@ class Document(models.Model):
 
     THE 'contents' FIELD:
     ---------------------
-    This model implies storeing document contents directly in the database. This
+    This model implies storing document contents directly in the database as
+    text, perhaps as base64. This
     is an extremely poor design in almost all cases, but as this is merely a
     prototype, it will be allowed for this case. It will lead to abyssmal
     database performance. For actual implementation, consider replacing this
@@ -64,13 +66,20 @@ class Document(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True)
-    topics = models.ManyToManyField(Topic)
+    folder = models.ForeignKey(Folder, related_name='documents', on_delete=models.CASCADE, null=True)
+    topics = models.ManyToManyField(Topic, related_name='documents', blank=True)
     
-    # See class comment for justification on use of BinaryField
-    contents = models.BinaryField(editable=False)
+    # See class comment for justification on use of large TextField
+    contents = models.TextField(editable=False)
 
     def __str__(self):
         return self.name
+
+    @property
+    def path(self) -> str:
+        path = '/' + self.name
+        if self.folder is not None:
+            path = self.folder.path + path
+        return path
 
     

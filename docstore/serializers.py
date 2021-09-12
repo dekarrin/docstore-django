@@ -1,26 +1,37 @@
 from rest_framework import serializers
-from .models import Topic
+from .models import Topic, Folder, Document
 
 # TODO: look into serializers.ModelSerializer and whether it will default to
 # the validation settings given here
 
-class TopicSerializer(serializers.Serializer):
-    id = serializers.UUIDField(read_only=True)
-    short_desc = serializers.CharField(max_length=255)
-    full_desc = serializers.CharField()
 
-    def create(self, validated_data):
-        """
-        Create and return a new Topic instance from the validated data.
-        """
-        return Topic.objects.create(**validated_data)
+class DocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document
+        fields = ['id', 'path', 'name', 'folder', 'topics']
+        extra_kwargs = {'topics': {'required': False}}
 
-    def update(self, instance, validated_data):
-        """
-        Update and return an existing Topic instances with the validated data.
-        """
-        instance.short_desc = validated_data.get('short_desc', instance.short_desc)
-        instance.full_desc = validated_data.get('full_desc', instance.full_desc)
-        instance.save()
-        return instance
+
+class FolderSerializer(serializers.ModelSerializer):
+    documents = DocumentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Folder
+        fields = ['id', 'path', 'name', 'parent', 'topics', 'documents']
+        extra_kwargs = {
+            'topics': {'required': False},
+            'documents': {'required': False},
+        }
+
+
+class TopicSerializer(serializers.ModelSerializer):
+    folders = FolderSerializer(many=True, read_only=True)
+    documents = DocumentSerializer(many=True, read_only=True)
     
+    class Meta:
+        model = Topic
+        fields = ['id', 'short_desc', 'full_desc', 'folders', 'documents']
+        extra_kwargs = {
+            'folders': {'required': False},
+            'documents': {'required': False}
+        }
