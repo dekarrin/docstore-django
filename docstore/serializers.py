@@ -20,7 +20,7 @@ class TopicSerializer(serializers.Serializer):
         Update and return an existing Topic instances with the validated data.
         """
         instance.short_desc = validated_data.get('short_desc', instance.short_desc)
-        instance.long_desc = validated_data.get('long_desc', instance.long_desc)
+        instance.full_desc = validated_data.get('full_desc', instance.full_desc)
         instance.save()
         return instance
     
