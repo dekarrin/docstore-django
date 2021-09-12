@@ -35,3 +35,15 @@ class TopicSerializer(serializers.ModelSerializer):
             'folders': {'required': False},
             'documents': {'required': False}
         }
+
+# Doesn't include the topic's subjects, only gives the listings.
+class TopicListingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Topic
+        fields = ['id', 'short_desc', 'full_desc']
+
+# Doesn't include the folder's contents, only gives the listings.
+class FolderListingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Folder
+        fields = ['id', 'path', 'name', 'parent', 'topics']

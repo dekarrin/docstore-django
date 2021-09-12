@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Topic, Folder, Document
-from .serializers import TopicSerializer, FolderSerializer, DocumentSerializer
+from .serializers import *
 
 # Since we are using the rest framework, may want to see if we can use the mixins
 # and APIView generics from DRF instead of manually typing these things out.
@@ -14,8 +14,8 @@ from .serializers import TopicSerializer, FolderSerializer, DocumentSerializer
 
 class TopicListView(APIView):
     def get(self, request):
-        topics = Topic.objects.all()
-        serializer = TopicSerializer(topics, many=True)
+        topics = Topic.objects.values()
+        serializer = TopicListingSerializer(topics, many=True)
         return Response(serializer.data)
 
     def post(self, request):
@@ -64,7 +64,16 @@ class TopicDetailView(APIView):
 class FolderListView(APIView):
     def get(self, request):
         folders = Folder.objects.all()
-        serializer = FolderSerializer(folders, many=True)
+
+        # TOOD: To simplify, might want to pull out folder search into its own
+        # view
+        by_topic = request.query_params.get('topic')
+
+        # TODO: allow multiple topic filters
+        if by_topic:
+            folders = folders.filter(topics__short_desc=by_topic)
+
+        serializer = FolderListingSerializer(folders, many=True)
         return Response(serializer.data)
 
     def post(self, request):
@@ -113,6 +122,24 @@ class FolderDetailView(APIView):
 class DocumentListView(APIView):
     def get(self, request):
         docs = Document.objects.all()
+
+        # TODO: To simplify, might want to pull out doc search into its own
+        # view
+        by_folder = request.query_params.get('folder')
+        by_topic = request.query_params.get('topic')
+
+        # TODO: make folder filter match on ANY folder in the full path
+        # TODO: allow folder filter to give a full path, or glob
+        if by_folder is not None:
+            if by_folder == '':
+                docs = docs.filter(folder__isnull=True)
+            else:
+                docs = docs.filter(folder__name=by_folder)
+
+        # TODO: allow multiple topic filters
+        if by_topic:
+            docs = docs.filter(topics__short_desc=by_topic)
+
         serializer = DocumentSerializer(docs, many=True)
         return Response(serializer.data)
 
