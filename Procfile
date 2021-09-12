@@ -1,1 +1,1 @@
-web: gunicorn startapp.wsgi
+web: gunicorn spekit.wsgi
