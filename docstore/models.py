@@ -70,7 +70,7 @@ class Document(models.Model):
     topics = models.ManyToManyField(Topic, related_name='documents', blank=True)
     
     # See class comment for justification on use of large TextField
-    contents = models.TextField(editable=False)
+    contents = models.TextField()
 
     def __str__(self):
         return self.name

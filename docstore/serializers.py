@@ -8,7 +8,7 @@ from .models import Topic, Folder, Document
 class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
-        fields = ['id', 'path', 'name', 'folder', 'topics']
+        fields = ['id', 'path', 'name', 'folder', 'topics', 'contents']
         extra_kwargs = {'topics': {'required': False}}
 
 
